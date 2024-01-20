@@ -13,7 +13,7 @@ into 5 sections (some of which are empty in certain cases) shown below:
     +---------------------+
     |      Additional     | RRs holding additional information
     +---------------------+ '''
-# We'll be creating only first 3 sections 
+
 from dataclasses import dataclass
 
 @dataclass
@@ -42,5 +42,11 @@ class DNSquestionSection:
 class DNSanswerSection:
     NTC : DNSquestionSection
     TTL : int       # The duration in seconds a record can be cached before requerying.
-    RDATA : vars     # Data specific to the record type.
     RDLENGTH : int  # Length of the RDATA field in bytes.
+    RDATA: int      # IP address
+
+@dataclass
+class DNSauthoritativeSection:
+    NS : str    # NS is name servers
+
+
