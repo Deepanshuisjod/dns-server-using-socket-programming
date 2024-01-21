@@ -16,6 +16,6 @@ dns_header_instance = DNSheader(
 dns_question_instance = DNSquestionSection("google.com",1,1)
 
 client.sendto(dns_header_instance.get_values() + dns_question_instance.domain_name() + dns_question_instance.type_class_(),(SERVER_IP,SERVER_PORT))
-response = client.recvfrom(1024)
-print(response)
+response_ = client.recvfrom(1024)
+print(response_)
 client.close()
