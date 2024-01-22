@@ -34,7 +34,24 @@ class DNSheader :
     
     def get_values(self) -> bytes:
         flags = (self.qr << 15) | (self.opcode << 11) | (self.AA << 10) | (self.TC << 9) | (self.RD << 8) | (self.RA << 7) | (self.Z << 4) | (self.RCODE)
-        return struct.pack(">HHHHHH",self.id,flags,self.QDCOUNT,self.ANCOUNT,self.NSCOUNT,self.ARCOUNT)
+        packed_header =  struct.pack(">HHHHHH",self.id,flags,self.QDCOUNT,self.ANCOUNT,self.NSCOUNT,self.ARCOUNT)
+        return packed_header
+    
+    def parse_header(response):
+        id, packed_flags, QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT = struct.unpack(">HHHHHH", response)
+        qr = (packed_flags >> 15) & 0x1
+        opcode = (packed_flags >> 11) & 0xF
+        AA = (packed_flags >> 10) & 0x1
+        TC = (packed_flags >> 9) & 0x1
+        RD = (packed_flags >> 8) & 0x1
+        RA = (packed_flags >> 7) & 0x1
+        Z = (packed_flags >> 4) & 0x7
+        RCODE = packed_flags & 0xF
+
+        unpacked_header =  DNSheader(id = id, qr = qr, opcode = opcode, AA = AA, TC = TC, RD = RD, RA = RA, 
+                         Z = Z, RCODE = RCODE, QDCOUNT = QDCOUNT, ANCOUNT = ANCOUNT, NSCOUNT = NSCOUNT, 
+                         ARCOUNT = ARCOUNT) 
+        return unpacked_header
 @dataclass
 class DNSquestionSection:
     Name : str      # Domain Name which is the sequence of label
@@ -50,8 +67,13 @@ class DNSquestionSection:
     def type_class_(self) -> bytes:
         type_n_class = struct.pack(">HH",self.type,self.class_)
         return type_n_class
+
+
 @dataclass
 class DNSanswerSection:
+    Name : str      # Domain Name which is the sequence of label
+    type : int      # type is the type of record A(address) - 1, NS(name server) - 2, MX(Mail Exchange) - 3, CNAME(Cannonical/Alias Name of server) - 5 
+    class_ : int    # Usually set to 1 for internet (IN)
     TTL : int       # The duration in seconds a record can be cached before requerying.
     RDLENGTH : int  # Length of the RDATA field in bytes.
     RDATA: int      # IP address
