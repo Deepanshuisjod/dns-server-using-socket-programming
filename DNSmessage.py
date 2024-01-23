@@ -37,8 +37,8 @@ class DNSheader :
         packed_header =  struct.pack(">HHHHHH",self.id,flags,self.QDCOUNT,self.ANCOUNT,self.NSCOUNT,self.ARCOUNT)
         return packed_header
     
-    def parse_header(response):
-        id, packed_flags, QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT = struct.unpack(">HHHHHH", response)
+    def parse_header(recieved_header):
+        id, packed_flags, QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT = struct.unpack(">HHHHHH", recieved_header)
         qr = (packed_flags >> 15) & 0x1
         opcode = (packed_flags >> 11) & 0xF
         AA = (packed_flags >> 10) & 0x1
@@ -55,31 +55,35 @@ class DNSheader :
 @dataclass
 class DNSquestionSection:
     Name : str      # Domain Name which is the sequence of label
-    type : int      # type is the type of record A(address) - 1, NS(name server) - 2, MX(Mail Exchange) - 3, CNAME(Cannonical/Alias Name of server) - 5 
+    type_ : int      # type is the type of record A(address) - 1, NS(name server) - 2, MX(Mail Exchange) - 3, CNAME(Cannonical/Alias Name of server) - 5 
     class_ : int    # Usually set to 1 for internet (IN)
 
-    def domain_name(self):
+    def encode_question(self) -> bytes:
         labels = self.Name.split('.')
         encoded_labels = [bytes([len(label)]) + label.encode('utf-8') for label in labels]
         encoded_name = b''.join(encoded_labels) + b'\x00'
-        return encoded_name
-    
-    def type_class_(self) -> bytes:
-        type_n_class = struct.pack(">HH",self.type,self.class_)
-        return type_n_class
+        type_n_class = struct.pack(">HH", self.type_, self.class_)
+        return encoded_name + type_n_class
 
+    def parse_question(data):
+        label_length = data[0]
+        label = data[1:1 + label_length].decode('utf-8')
+        name = label + "." + data[1 + label_length:].split(b'\x00', 1)[0].decode('utf-8')
+        type_, class_ = struct.unpack(">HH", data[-4:])
+        unpacked_question = DNSquestionSection(Name = name , type_ = type_, class_ = class_)
+        return unpacked_question
 
 @dataclass
 class DNSanswerSection:
     Name : str      # Domain Name which is the sequence of label
-    type : int      # type is the type of record A(address) - 1, NS(name server) - 2, MX(Mail Exchange) - 3, CNAME(Cannonical/Alias Name of server) - 5 
+    type_ : int      # type is the type of record A(address) - 1, NS(name server) - 2, MX(Mail Exchange) - 3, CNAME(Cannonical/Alias Name of server) - 5 
     class_ : int    # Usually set to 1 for internet (IN)
     TTL : int       # The duration in seconds a record can be cached before requerying.
     RDLENGTH : int  # Length of the RDATA field in bytes.
     RDATA: int      # IP address
 
     def get_values(self):
-        return struct.pack(">IIH",self.TTL,self.RDATA,self.RDLENGTH)
+        return struct.pack(">IHI", self.TTL, self.RDLENGTH, self.RDATA)
 
 @dataclass
 class DNSauthoritativeSection:
